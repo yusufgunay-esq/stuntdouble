@@ -100,6 +100,12 @@ export interface EntitySnapshot {
   isRanged: boolean;
   /** Optional: seconds until a projectile this entity already fired reaches the target (<= 0 or absent = none in flight). */
   projectileEta?: number;
+  /** Optional: true while this hostile is staggered in a post-attack recovery window (a defended strike). */
+  recovering?: boolean;
+  /** Optional: this hostile's real attack reach in meters. Ranged threat detection uses it; absent = legacy 16 m. */
+  attackRange?: number;
+  /** Optional (self snapshot): half-extent of a square arena; walls become steering hazards. 0/absent = unknown. */
+  bounds?: number;
   threatWeight: number;    // Base danger level (e.g., 1.0 grunt, 3.0 elite/boss)
 }
 
@@ -277,8 +283,10 @@ export class TacticalBlackboard {
   public stance: TacticalStance = 'BALANCED';
   public primaryTarget: EntitySnapshot | null = null;
   public imminentThreat: EntitySnapshot | null = null;
-  /** Nearest ranged hostile that is winding up (<= 16 m) or has a projectile in flight; null if none. */
+  /** Nearest ranged hostile that is winding up (inside its real reach, legacy 16 m) or has a projectile in flight; null if none. */
   public rangedThreat: EntitySnapshot | null = null;
+  /** Nearest melee hostile staggered in its recovery window (punish opportunity); null if none. */
+  public counterTarget: EntitySnapshot | null = null;
   public pressureIndex = 0;
   public influenceMap = new InfluenceMap2D(12, 2.5);
   public customData: Record<string, unknown> = {};
@@ -293,7 +301,9 @@ export class TacticalBlackboard {
     let bestTarget: EntitySnapshot | null = null;
     let windUpThreat: EntitySnapshot | null = null;
     let rangedThreat: EntitySnapshot | null = null;
+    let counterTarget: EntitySnapshot | null = null;
     let rangedDist = Infinity;
+    let counterDist = Infinity;
     let rawPressure = 0;
 
     for (const h of this.hostiles) {
@@ -303,9 +313,18 @@ export class TacticalBlackboard {
       if (h.isWindUp && d < 4.5 && !h.isRanged) {
         windUpThreat = h;
       }
-      if (h.isRanged && ((h.isWindUp && d <= 16.0) || (h.projectileEta ?? 0) > 0) && d < rangedDist) {
+      // [CROWD-004] the ranged threat radius is the enemy's real reach, not a fixed 16 m
+      // (absent field = legacy 16 m so older snapshots keep their exact behaviour).
+      const rangedLimit = (h.attackRange ?? 0) > 0 ? h.attackRange! : 16.0;
+      if (h.isRanged && ((h.isWindUp && d <= rangedLimit) || (h.projectileEta ?? 0) > 0) && d < rangedDist) {
         rangedDist = d;
         rangedThreat = h;
+      }
+      // [CROWD-004] a defended strike leaves the attacker staggered: one short punish window,
+      // used by the brain instead of locking into DEFENSIVE forever under crowd pressure.
+      if (!h.isRanged && h.recovering === true && d <= 3.5 && d < counterDist) {
+        counterDist = d;
+        counterTarget = h;
       }
       // [CORE-003] ranged enemies are squishy and drain the fight: they count as half as far for target choice.
       const key = h.isRanged ? d * 0.5 : d;
@@ -318,6 +337,7 @@ export class TacticalBlackboard {
     this.primaryTarget = bestTarget;
     this.imminentThreat = windUpThreat;
     this.rangedThreat = rangedThreat;
+    this.counterTarget = counterTarget;
     this.pressureIndex = Math.min(1.0, rawPressure / 3.5);
     this.influenceMap.update(self.position, this.hostiles);
   }
@@ -567,6 +587,8 @@ export interface StuntDecision {
   immediateCommand: string;
   steeringMove: Vec3;
   speedMultiplier: number;
+  /** True when this tick is a counter-punish inside an enemy recovery window (time critical). */
+  punishWindow: boolean;
   cameraDirective: CameraDirective;
 }
 
@@ -577,6 +599,8 @@ export class StuntBrain {
   private readonly jitter = new DisciplineJitter();
   private readonly utilityActions: UtilityAction[];
   private readonly goapActions: GoapAction[];
+  /** [CROWD-004] pressure hysteresis: once crowd pressure forces DEFENSIVE, stay there until it relaxes. */
+  private defensiveHold = false;
 
   constructor(customUtilityActions?: UtilityAction[], customGoapActions?: GoapAction[]) {
     this.utilityActions = customUtilityActions ?? StuntBrain.defaultUtilityActions();
@@ -655,6 +679,16 @@ export class StuntBrain {
       }
     }
 
+    // [CROWD-004] punish window: after a defended strike (parry/dodge) the staggered attacker is
+    // hit once, provided nothing else is about to land and stamina permits; then defence resumes.
+    const counter = this.blackboard.counterTarget;
+    if (
+      !inactive && !cruiseActive && !assistActive && counter !== null &&
+      self.healthRatio >= 0.3 && self.staminaRatio > 0.25
+    ) {
+      immediateCommand = 'STRIKE_COMBO';
+    }
+
     // [CORE-003] continuous aggression: low-aggression profiles keep a stamina reserve and skip
     // non-finisher attacks below it (reserve = (1 - aggression) * 0.6; monotone over the whole range).
     if (
@@ -688,6 +722,9 @@ export class StuntBrain {
     let navTarget = self.position;
     if (cruiseActive && waypointOrLootPos) {
       navTarget = waypointOrLootPos;
+    } else if (counter !== null) {
+      // [CROWD-004] step into the punish window instead of backing away from it.
+      navTarget = counter.position;
     } else if (stance === 'EVASIVE' || stance === 'DEFENSIVE') {
       navTarget = this.blackboard.influenceMap.findSafestPocket(self.position);
     } else if (this.blackboard.primaryTarget) {
@@ -699,6 +736,19 @@ export class StuntBrain {
       radius: h.isWindUp ? 4.2 : 2.5,
       weight: h.threatWeight * (h.isWindUp ? 1.8 : 1.0),
     }));
+    // [CROWD-004] when the adapter reports the arena extent, walls repel like hazards; under crowd
+    // pressure the retreat no longer paints itself into a corner.
+    const bounds = self.bounds ?? 0;
+    if (bounds > 0) {
+      const wallRadius = 12;
+      const wallWeight = 2.0;
+      hazards.push(
+        { position: { x: bounds + 1, y: 0, z: self.position.z }, radius: wallRadius, weight: wallWeight },
+        { position: { x: -bounds - 1, y: 0, z: self.position.z }, radius: wallRadius, weight: wallWeight },
+        { position: { x: self.position.x, y: 0, z: bounds + 1 }, radius: wallRadius, weight: wallWeight },
+        { position: { x: self.position.x, y: 0, z: -bounds - 1 }, radius: wallRadius, weight: wallWeight }
+      );
+    }
 
     const prefRange = cruiseActive ? 0.5 : profile.preferredRange;
 
@@ -747,15 +797,25 @@ export class StuntBrain {
       immediateCommand,
       steeringMove: direction,
       speedMultiplier: quantize(speedMultiplier, 3),
+      punishWindow: counter !== null && immediateCommand === 'STRIKE_COMBO',
       cameraDirective,
     };
   }
 
   private evaluateStance(): TacticalStance {
     const bb = this.blackboard;
-    if (bb.hostiles.length === 0) return 'STEALTH';
-    if (bb.self.healthRatio < 0.28) return 'EVASIVE';
-    if (bb.imminentThreat !== null || bb.pressureIndex > 0.72) return 'DEFENSIVE'; // [CORE-003] continuous (was a fixed 0.72)
+    if (bb.hostiles.length === 0) { this.defensiveHold = false; return 'STEALTH'; }
+    if (bb.self.healthRatio < 0.28) { this.defensiveHold = false; return 'EVASIVE'; }
+    // [CROWD-004] a punish window releases the defensive lock for exactly as long as it lasts;
+    // once the enemy is back up the stance falls back to DEFENSIVE on the next tick.
+    if (bb.counterTarget !== null && bb.imminentThreat === null) { this.defensiveHold = false; return 'BALANCED'; }
+    if (bb.imminentThreat !== null || bb.pressureIndex > 0.72) { // [CORE-003] continuous (was a fixed 0.72)
+      this.defensiveHold = true;
+      return 'DEFENSIVE';
+    }
+    // [CROWD-004] hysteresis: leave DEFENSIVE only when the crowd actually thins out.
+    if (this.defensiveHold && bb.pressureIndex > 0.55) return 'DEFENSIVE';
+    this.defensiveHold = false;
     if (bb.profile.aggression >= 0.65 && bb.self.staminaRatio > 0.35) return 'AGGRESSIVE';
     return 'BALANCED';
   }

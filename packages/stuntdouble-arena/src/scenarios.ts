@@ -175,4 +175,23 @@ export const TIER_SCENARIOS: Scenario[] = [
     maxTime: 90,
     gates: { ...tierGates },
   },
+  {
+    // [CROWD-004] The defect this tier exists to catch: 4 melee in an arc + 1 archer used to
+    // pin the brain in DEFENSIVE forever (zero attack commands) and the fight was only survived
+    // by kiting. The gate demands both: survive every seed AND land at least one kill.
+    id: 't4_crowd',
+    title: 'Tier 4 (crowd): 4 melee arc + 1 archer, punish windows under pressure',
+    tier: 4, hard: true,
+    behaviors: Behavior.COMBAT, profile: spartan,
+    enemies: [
+      hgrunt('g1', 7, 0, { feint: 0.15, windupVar: 0.25 }),
+      hgrunt('g2', 4, 6, { feint: 0.15, windupVar: 0.25, flank: 0.4 }),
+      hgrunt('g3', -5, 5, { feint: 0.15, windupVar: 0.25, flank: -0.4 }),
+      hgrunt('g4', -5, -5, { feint: 0.15, windupVar: 0.25 }),
+      harcher('a1', 13, -7, { lead: 0.3, damage: 6, recover: 1.6 }),
+    ],
+    obstacles: [{ x: 4, z: 3, r: 1.2 }, { x: -6, z: -3, r: 1.2 }, { x: 9, z: -3, r: 1.2 }],
+    maxTime: 90,
+    gates: { ...tierGates, minKills: 1 },
+  },
 ];

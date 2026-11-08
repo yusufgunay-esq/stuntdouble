@@ -96,7 +96,7 @@ export interface RuntimeOptions {
 
 /** Why Stuntdouble replaced the native AI's proposal this tick. */
 export interface OverrideRecord {
-  reason: 'imminent-strike' | 'low-health' | 'defensive-no-offense';
+  reason: 'imminent-strike' | 'low-health' | 'defensive-no-offense' | 'punish-window';
   native: string;
   used: string;
 }
@@ -216,7 +216,11 @@ export class StuntRuntime {
       // Native AI is the base layer; Stuntdouble only overrides its weak moments.
       let reason: OverrideRecord['reason'] | null = null;
       if (this.overrideNative) {
-        if (REFLEX.has(command) && proposal.command !== command) {
+        if (decision.punishWindow && proposal.command !== command) {
+          // A defended strike opens a short recovery window; losing it to the native AI's
+          // "keep closing" command is how the layered agent used to bleed out in a crowd.
+          reason = 'punish-window';
+        } else if (REFLEX.has(command) && proposal.command !== command) {
           reason = self.healthRatio < 0.3 ? 'low-health' : 'imminent-strike';
         } else if ((decision.behaviors & 8) !== 0 && OFFENSE.has(proposal.command)) {
           reason = 'defensive-no-offense';

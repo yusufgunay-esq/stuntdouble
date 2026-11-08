@@ -47,6 +47,7 @@ export interface GateSpec {
   maxWall?: number;          // max share of ticks within 1.5 m of the arena edge (no wall hugging)
   maxCmdShare?: number;      // max share of the most frequent command (no single-move spam)
   noUnreactable?: boolean;   // unreactableHit must be 0: every telegraph the world shows is answered
+  minKills?: number;         // enemies killed before maxTime (crowd tiers must not win by kiting alone)
   zeroLockedInput: boolean;
 }
 
@@ -66,7 +67,7 @@ export interface Scenario {
   native?: 'weak' | 'basic';
   /** Hard enemy rules: one-hit parry with lock, projectiles instead of instant ranged hits. */
   hard?: boolean;
-  tier?: 1 | 2 | 3;
+  tier?: 1 | 2 | 3 | 4;
   gates: GateSpec;
 }
 
@@ -149,6 +150,8 @@ interface Enemy {
   vz: number;
   fake: boolean;
   projEta: number;
+  /** True while this enemy is staggered by a successful parry/dodge (punish window). */
+  staggered: boolean;
   seen?: boolean; // 'basic' native: did it notice this wind-up (55%)
 }
 
@@ -213,6 +216,8 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
     isWindUp: e.phase === 'windup',
     isRanged: !!e.spec.ranged,
     projectileEta: e.projEta,
+    recovering: e.staggered && e.phase === 'recover',
+    attackRange: e.spec.reach,
     threatWeight: e.spec.threat,
   });
 
@@ -226,6 +231,7 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
       isAttacking: time - player.lastAtk < 0.3,
       isWindUp: false,
       isRanged: false,
+      bounds: ARENA,
       threatWeight: 1,
     }),
     hostiles: () => enemies.filter((e) => e.hp > 0).map(snap),
@@ -279,7 +285,9 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
             // Guards only once a melee wind-up is already close; blind to ranged and to what comes next.
             const watch = enemies.some((e) => {
               if (e.hp <= 0 || e.phase !== 'windup' || e.spec.ranged || Math.hypot(e.x - player.x, e.z - player.z) >= 2.6) return false;
-              if (e.seen === undefined) e.seen = rng() < 0.55;
+              // Deterministic per-wind-up "did it notice" roll. Deliberately NOT the world RNG:
+              // agents must face the same enemy timeline for the comparison to mean anything.
+              if (e.seen === undefined) e.seen = ((tickNo * 37 + e.spec.id.charCodeAt(1) * 17) % 100) < 55;
               return e.seen;
             });
             if (watch) {
@@ -370,6 +378,7 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
 
   const startWindup = (e: Enemy, d: number): void => {
     e.phase = 'windup';
+    e.staggered = false;
     e.timer = windupLen(e, false);
     e.fake = !!sc.hard && (e.spec.feint ?? 0) > 0 && !e.spec.ranged && rng() < (e.spec.feint ?? 0);
     e.reactable = reactableAt(e, d);
@@ -416,11 +425,21 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
       e.phase = 'recover';
       e.timer = 1.0;
       e.comboLeft = 0;
+      e.staggered = true; // [CROWD-004] punish window opens for the brain
       if (sc.hard) { player.parryUntil = -1; player.parryLock = time + 0.4; }
       events.push('parry');
       return;
     }
-    if (time < player.dodgeUntil) { res.dodged++; events.push('dodge'); return; }
+    if (time < player.dodgeUntil) {
+      res.dodged++;
+      // [CROWD-004] a dodged strike leaves the attacker off balance: short recovery, same punish window.
+      e.phase = 'recover';
+      e.timer = Math.max(0.6, e.spec.recover * 0.8);
+      e.comboLeft = 0;
+      e.staggered = true;
+      events.push('dodge');
+      return;
+    }
     if (d > e.spec.reach + 0.8) { res.whiff++; events.push('whiff'); return; }
     res.hit++;
     res.hitBy[e.spec.id] = (res.hitBy[e.spec.id] ?? 0) + 1;
@@ -449,7 +468,7 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
       if (firstSpawn < 0) firstSpawn = time;
       enemies.push({
         spec: s, x: s.rel ? player.x + s.x : s.x, z: s.rel ? player.z + s.z : s.z, hp: s.hp,
-        phase: 'approach', timer: 0.6 + rng() * 0.6, comboLeft: 0, struckTick: false, reactable: false, vx: 0, vz: 0, fake: false, projEta: 0,
+        phase: 'approach', timer: 0.6 + rng() * 0.6, comboLeft: 0, struckTick: false, reactable: false, vx: 0, vz: 0, fake: false, projEta: 0, staggered: false,
       });
     }
 
@@ -557,7 +576,7 @@ export function runScenario(sc: Scenario, seed: number, opts: { record?: boolean
         }
       } else {
         e.timer -= DT;
-        if (e.timer <= 0) { e.phase = 'approach'; e.timer = 0.2; }
+        if (e.timer <= 0) { e.phase = 'approach'; e.timer = 0.2; e.staggered = false; }
       }
     }
 

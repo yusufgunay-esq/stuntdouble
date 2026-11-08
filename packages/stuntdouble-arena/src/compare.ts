@@ -34,11 +34,21 @@ export const COMPARE_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
  * Fixed hard-tier thresholds (seeds 1-8). Protected by arena.test.ts; never tuned per run.
  * (a)/(b) must die or take heavy damage; (c)/(d) must survive every seed with clearly less damage.
  */
-export function compareGate(stats: AgentStats[]): { pass: boolean; detail: string[] } {
+export function compareGate(stats: AgentStats[], scenarioId?: string): { pass: boolean; detail: string[] } {
   const by = Object.fromEntries(stats.map((s) => [s.agent, s])) as Record<Agent, AgentStats>;
   const detail: string[] = [];
   const check = (name: string, ok: boolean, info: string) => detail.push(`${ok ? 'ok  ' : 'FAIL'} ${name}: ${info}`);
   const n = by.stuntdouble.runs;
+  if (scenarioId === 't4_crowd') {
+    // [CROWD-004] crowd gate: survive every seed AND kill at least one enemy on average.
+    // Kiting alone (0 kills) fails even with a perfect survival record.
+    for (const k of ['stuntdouble', 'layered'] as Agent[]) {
+      const s = by[k];
+      check(`${s.label} survives`, s.survived === n, `${s.survived}/${n}`);
+      check(`${s.label} punishes`, s.kills >= 1, `${s.kills.toFixed(1)} kills per run (min 1.0): not pure kiting`);
+    }
+    return { pass: detail.every((d) => d.startsWith('ok')), detail };
+  }
   check('(a) naive dies', by.naive.survived <= 1, `${by.naive.survived}/${n} survived (max 1)`);
   check('(b) native hurt', by.native.survived <= n - 2 && by.native.damage >= 100, `${by.native.survived}/${n} survived (max ${n - 2}), damage ${by.native.damage.toFixed(0)} (min 100)`);
   for (const k of ['stuntdouble', 'layered'] as Agent[]) {

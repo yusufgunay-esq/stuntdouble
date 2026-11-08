@@ -12,6 +12,7 @@ export function evaluateGates(sc: Scenario, r: RunResult, baseline?: RunResult):
   const add = (name: string, pass: boolean, detail: string) => out.push({ name, pass, detail });
   if (g.survive) add('survive', r.survived, `hp ${r.hpEnd}/100`);
   if (g.winAll) add('winAll', r.enemiesKilled === r.enemiesTotal, `${r.enemiesKilled}/${r.enemiesTotal} killed in ${r.time}s`);
+  if (g.minKills !== undefined) add('kills', r.enemiesKilled >= g.minKills, `${r.enemiesKilled} killed (need ${g.minKills}): defence must punish, not only kite`);
   if (g.minAvoid !== undefined) {
     const reactableHits = r.hit - r.unreactableHit;
     const ratio = r.reactable > 0 ? 1 - reactableHits / r.reactable : 1;

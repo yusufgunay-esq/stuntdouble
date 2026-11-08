@@ -38,8 +38,8 @@ if (argv.includes('--compare')) {
     console.log(`${sc.id}  ${sc.title}`);
     console.log('  agent                 survived  hp end  damage  hits  kills');
     for (const r of st) console.log(`  ${r.label.padEnd(21)} ${(r.survived + '/' + r.runs).padStart(8)}  ${r.hpEnd.toFixed(0).padStart(6)}  ${r.damage.toFixed(0).padStart(6)}  ${r.hits.toFixed(1).padStart(4)}  ${r.kills.toFixed(1).padStart(5)}`);
-    if (sc.tier === 3) {
-      const g = compareGate(st);
+    if (sc.tier !== undefined && sc.tier >= 3) {
+      const g = compareGate(st, sc.id);
       ok &&= g.pass;
       for (const d of g.detail) console.log('  ' + d);
     }
