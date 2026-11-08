@@ -63,7 +63,6 @@ export type RuntimeState =
   | 'OFF'          // disarmed (toggle) or engage:'manual' and not switched on
   | 'STANDBY'      // engage:'onCombat': armed, no combat, human plays
   | 'LOCKED'       // cutscene / menu / loading: Stuntdouble is inert
-  | 'LOCKED'       // cutscene / menu / loading: Stuntdouble is inert
   | 'MANUAL'       // human override: Stuntdouble is inert, resumes when the override ends
   | 'PASS_THROUGH' // brain decided the human keeps control this tick
   | 'ACTIVE';      // brain drives the input seam

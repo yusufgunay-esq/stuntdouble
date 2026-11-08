@@ -15,7 +15,7 @@ Every Stuntdouble Brain implementation (`TypeScript`, `C#`, `C++20`, `Lua`) exec
 $$\mathcal{T}_{\text{Stuntdouble}}(t) = \mathcal{L}_1\Big(\mathcal{L}_2(S_t), \; \mathcal{L}_3\big(\mathcal{L}_2(S_t), \mathcal{L}_4(\mathcal{P})\big)\Big)$$
 
 ### Layer 4: Narrative & Tactical Orchestrator ($\mathcal{L}_4$)
-Evaluates global encounter pressure, protagonist health/stamina ratios, and the loaded **Profile Profile** $\mathcal{P} = \langle \alpha, \delta, \phi, \tau_r, r^* \rangle$ (where $\alpha \in [0,1]$ is aggression, $\delta \in [0,1]$ is discipline, $\phi \in [0,1]$ is cinematic flair, $\tau_r$ is motor latency, and $r^*$ is preferred engagement range).
+Evaluates global encounter pressure, protagonist health/stamina ratios, and the loaded **Profile** $\mathcal{P} = \langle \alpha, \delta, \phi, \tau_r, r^* \rangle$ (where $\alpha \in [0,1]$ is aggression, $\delta \in [0,1]$ is discipline, $\phi \in [0,1]$ is cinematic flair, $\tau_r$ is motor latency, and $r^*$ is preferred engagement range).
 - Selects the active **Tactical Stance** $\sigma \in \{\text{AGGRESSIVE}, \text{BALANCED}, \text{DEFENSIVE}, \text{EVASIVE}, \text{STEALTH}\}$.
 - Emits the high-level **Goal State** $G^*$ for the GOAP planner and the **Camera Directive** $\mathcal{C}_t$ for the Presentation Director.
 

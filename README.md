@@ -86,7 +86,7 @@ flowchart TD
     end
 
     subgraph StuntKernel["Stuntdouble Shared Cognitive Brain (@stuntdouble/brain)"]
-        L4["Layer 4: Narrative & Tactical Orchestrator<br/>(Profile Profile, Stance Selection & Presentation Director)"]
+        L4["Layer 4: Narrative & Tactical Orchestrator<br/>(Profile, Stance Selection & Presentation Director)"]
         L3["Layer 3: Regressive A* GOAP Planner + Compensated Utility AI<br/>(Multi-Step Action Chains & Reflex Interrupts)"]
         L2["Layer 2: Tactical Blackboard & 2D Spatial Influence Map<br/>(Threat Heatmaps, Safe-Pocket Search & Aggro Tracking)"]
         L1["Layer 1: 16-Slot Context Steering<br/>(Interest - Danger Radial Vector Synthesis)"]

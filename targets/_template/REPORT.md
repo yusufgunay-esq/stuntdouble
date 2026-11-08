@@ -4,7 +4,7 @@
 - **Status:** `RECON` | `PROTOTYPE` | `VERIFIED`
 - **Brain Runtime Linked:** `stuntdouble-brain-cs` | `stuntdouble-brain-cpp` | `stuntdouble-brain-lua` | `stuntdouble-brain-ts`
 - **Strategy Tier Used:** `S1` | `S2` | `S3` | `S4` | `S5`
-- **Default Profile Profile:** `<game-slug>` (authored per protagonist — see `profile.json`; free-form `archetype` label, **presets are only starting points**)
+- **Default profile:** `<game-slug>` (authored per protagonist — see `profile.json`; free-form `archetype` label, **presets are only starting points**)
 - **Supported Presentation Modes:** `TACTICAL`, `CINEMATIC_LIVE`, `CINEMATIC_RESOLVE`
 
 ---
