@@ -1,18 +1,27 @@
-<div align="center">
-
 # Stuntdouble
+
+by [Yusuf Günay](https://github.com/yusufgunay-esq)
+
 ### Competent combat hand-over for story-driven single-player games
 
 **An Open-Source, User-Configurable Game AI & Reverse-Engineering Protocol for Single-Player Games**
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-1e293b.svg)](LICENSE)
-[![Cognitive Kernel](https://img.shields.io/badge/Brain_Kernel-TS_%7C_C%23_%7C_C%2B%2B20_%7C_Lua-0f172a.svg)](#3-shared-multi-language-brain-sdk-packages)
-[![Recon Engine](https://img.shields.io/badge/Binary_Recon-REA_Compatible-334155.svg)](skills/stuntdouble/SKILL.md)
-[![Architecture](https://img.shields.io/badge/Architecture-4--Layer_GOAP_%2B_Utility_AI-475569.svg)](paper/WHITEPAPER.md)
+[![CI](https://github.com/yusufgunay-esq/stuntdouble/actions/workflows/ci.yml/badge.svg)](https://github.com/yusufgunay-esq/stuntdouble/actions/workflows/ci.yml)
+
+<img src="arena-replay.png" alt="Deterministic arena replay, duel scenario: four frames from t=2.6s to t=5.6s showing hits and whiffs on the same seed" width="760">
 
 [Whitepaper & Math](paper/WHITEPAPER.md) · [Roadmap](docs/ROADMAP.md) · [Arena](packages/stuntdouble-arena/) · [Agent Skill Protocol](skills/stuntdouble/SKILL.md) · [Shared Brain SDK](packages/) · [Profile Schema](schemas/profile.schema.json) · [Profile Presets](schemas/profiles.json) · [Target Recipes](targets/)
 
-</div>
+## Quick Verification
+
+Node.js 22.6+ (TypeScript runs through `--experimental-strip-types`; no npm dependencies):
+
+```bash
+npm test                  # kernel + seam + arena tests, arena gate table, profile validation, fixture freshness, C# conformance if dotnet exists
+npm run arena             # gate table only
+npm run conformance:all   # strict C# / C++20 / Lua runners (CI does this)
+```
 
 ---
 
@@ -61,7 +70,7 @@ Decision (001): **if no behavior is active** (mask 0, `CRUISE` alone while an en
 
 **Hand-over (`StuntRuntime`, [`packages/stuntdouble-seams-ts`](packages/stuntdouble-seams-ts/src/index.ts)).** Default `engage: 'onCombat'`: Stuntdouble takes over as soon as a hostile is perceived and gives control back after the fight (no hostile for 2 s). `engage: 'manual'` uses a toggle bound to a key *you* choose (`toggleKey`; no fixed key). In both modes, manual input hands control back at once, and cutscene / menu / loading interlocks keep Stuntdouble inert (no command or steering is written; at most one neutral `release`). The arena proves each of these (section 4).
 
-### B. Optional Post-Core Extensions (Phase 2 — Added Only When Requested)
+### Optional Post-Core Extensions (Phase 2 — Added Only When Requested)
 
 | Extension ID | Name | Optional Capability |
 |---|---|---|
@@ -160,6 +169,7 @@ node packages/stuntdouble-arena/run.mjs --compare           # 4 agents x 3 diffi
 Tier gates also bound human-plausibility: steering reversals, wall hugging (<= 15% of ticks at the edge), single-command spam (<= 85%), and zero hits from telegraphs the brain could not see. The brain reacts to ranged wind-ups up to 16 m and to projectiles in flight (optional `projectileEta`): lateral sidestep, dodge timed to the impact.
 
 What this does **not** prove: real-game behavior. It proves the brain and runtime contract in a simplified world; every real adapter still needs its own live check. Known limits: the original 8 scenarios keep the simpler enemy model; the hard tier's boss and enemy numbers are tuned for this simulator, not for any real game.
+
 ---
 
 ## 5. Collective Game Autonomy Atlas (Local Verification, Consent, Bundle)
@@ -223,19 +233,7 @@ Stuntdouble/
 
 ---
 
-## 8. Quick Verification
-
-Node.js 22.6+ (TypeScript runs through `--experimental-strip-types`; no npm dependencies):
-
-```bash
-npm test                  # kernel + seam + arena tests, arena gate table, profile validation, fixture freshness, C# conformance if dotnet exists
-npm run arena             # gate table only
-npm run conformance:all   # strict C# / C++20 / Lua runners (CI does this)
-```
-
----
-
-## 9. Scope & Operational Ethics
+## 8. Scope & Operational Ethics
 
 - **Single-Player & Offline Only:** Stuntdouble strictly targets offline, single-player games. Targets with online competitive modes or kernel anti-cheat drivers (`EAC`, `BattlEye`, `Vanguard`) are rejected at Stage 1 reconnaissance.
 - **Zero Proprietary Assets:** No game binaries, `.pak` files, or proprietary assets are ever committed to this repository—only clean-room adapter source code, profile definitions, and REA seam documentation.
