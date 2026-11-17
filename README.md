@@ -174,7 +174,7 @@ What this does **not** prove: real-game behavior. It proves the brain and runtim
 
 ## 5. Collective Game Autonomy Atlas (Local Verification, Consent, Bundle)
 
-The atlas is **not** this code repository: per [docs/ROADMAP.md](docs/ROADMAP.md) it is a separate data repo with a single writer and approved submissions only. The flow today:
+The atlas is **not** this code repository: per [docs/ROADMAP.md](docs/ROADMAP.md) it is a separate data repo written only by its intake bot; submissions are validated automatically and need no human approval. The flow today:
 
 1. **Lookup first (`Stage 0`):** check `targets/<game-slug>/` here for a recipe before reverse engineering again.
 2. **Local verification (`Stage 7`):** the agent audits the recipe on the contributor's machine (no binaries, no personal paths) and shows the user exactly what would be sent.
@@ -183,7 +183,7 @@ The atlas is **not** this code repository: per [docs/ROADMAP.md](docs/ROADMAP.md
    node scripts/contribute-recipe.mjs <game-slug> --dry-run                          # audit only
    node scripts/contribute-recipe.mjs <game-slug> --bundle out.json --user-approved  # local bundle
    ```
-4. **Submission is not open yet.** The script opens no pull request and talks to no repository; the bundle stays on your disk until the atlas intake exists.
+4. **Submission is open:** paste the bundle into the [stuntdouble-atlas](https://github.com/yusufgunay-esq/stuntdouble-atlas) issue form. A deterministic validator accepts or rejects it automatically. The script itself opens no pull request and talks to no repository.
 
 ---
 
