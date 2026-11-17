@@ -62,6 +62,16 @@ Work remaining: replace the enum with flags in `stuntdouble-brain-ts/cs/cpp/lua`
 
 **Authorship:** the code repo stays single-author. The atlas repo is a separate community data repo, so it does not need that rule. Bot commits; an optional, opt-in `credit` handle per contribution (anonymous by default). Data license: CC BY 4.0 with attribution to the project.
 
+### Atlas intake v1 (built 2026-11-17)
+
+The atlas is live as `yusufgunay-esq/stuntdouble-atlas`. v1 simplifies the queue above: a GitHub
+issue form is the submission endpoint; one Action extracts the JSON (three consent boxes
+required), runs the deterministic validator (`E_SIZE`, `E_URL`, `E_RANGE`, `E_DUP`, ...) and
+commits to `games/<slug>/` under a concurrency lock; the issue is closed with the result code.
+Consensus is the median per numeric field, the mode for categorical fields and frequency-ordered
+seams; `meta.json` carries the contributor count, content hashes and a confidence score. No LLM
+runs on the maintainer side. A per-contribution credit handle is not part of v1 (anonymous only).
+
 ## Phase 2 (next step)
 **Protagonist Fidelity** (open idea, not a promise): REA derives the story protagonist's real fighting style into the same profile schema, for a narrative-consistent takeover.
 **"The AI works out the game itself"** (open idea): the agent discovers mechanics without a hand-written adapter.

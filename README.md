@@ -240,6 +240,12 @@ Stuntdouble/
 
 ---
 
+## Contributing
+
+Three doors: **game data** (profiles, seams, tuning) goes through the [stuntdouble-atlas](https://github.com/yusufgunay-esq/stuntdouble-atlas) issue form and is validated and merged automatically; **bugs and ideas** are GitHub issues here; **code** stays with the author — this repository is single-author, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+---
+
 ## Citation
 
 If you build upon Stuntdouble's cognitive architecture, profile schemas, or target adapters in academic work or open-source projects, please cite [`CITATION.cff`](CITATION.cff). The text below is identical to its `preferred-citation`:
